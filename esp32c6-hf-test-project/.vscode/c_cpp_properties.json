@@ -1,0 +1,75 @@
+{
+    "configurations": [
+        {
+            "name": "ESP32-C6 HardFOC Test",
+            "includePath": [
+                "${workspaceFolder}/main/include",
+                "${workspaceFolder}/components/hf_internal_interface_wrap",
+                "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap/inc",
+                "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap/inc/base",
+                "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap/inc/mcu",
+                "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap/inc/mcu/esp32",
+                "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap/inc/mcu/esp32/utils",
+                "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap/inc/utils",
+                "${env:IDF_PATH}/components/**",
+                "${workspaceFolder}/build/config"
+            ],
+            "defines": [
+                "ESP32C6",
+                "HF_TARGET_MCU_ESP32C6=1",
+                "HF_MCU_ESP32C6=1", 
+                "HF_MCU_FAMILY_ESP32=1",
+                "HF_THREAD_SAFE=1",
+                "CONFIG_IDF_TARGET_ESP32C6=1",
+                "ESP_PLATFORM",
+                "__XTENSA__",
+                "portTICK_PERIOD_MS=1"
+            ],
+            "compilerPath": "${env:IDF_PATH}/tools/riscv32-esp-elf/esp-13.2.0_20230928/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64",
+            "compilerArgs": [
+                "-mlongcalls",
+                "-Wno-frame-address",
+                "-ffunction-sections",
+                "-fdata-sections",
+                "-Wall",
+                "-Werror=all",
+                "-Wno-error=unused-function",
+                "-Wno-error=unused-variable",
+                "-Wno-error=deprecated-declarations",
+                "-Wextra",
+                "-Wno-unused-parameter",
+                "-Wno-sign-compare",
+                "-ggdb",
+                "-O2",
+                "-fstack-protector",
+                "-ffunction-sections",
+                "-fdata-sections",
+                "-Wall",
+                "-Werror=all",
+                "-Wno-error=unused-function",
+                "-Wno-error=unused-variable",
+                "-Wno-error=deprecated-declarations",
+                "-Wextra",
+                "-Wno-unused-parameter",
+                "-Wno-sign-compare",
+                "-ggdb",
+                "-Og",
+                "-std=gnu++17",
+                "-fno-exceptions",
+                "-fno-rtti"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "${workspaceFolder}/../tests-internal-interface-wrap/hf-internal-interface-wrap",
+                    "${env:IDF_PATH}/components"
+                ],
+                "limitSymbolsToIncludedHeaders": false
+            }
+        }
+    ],
+    "version": 4
+}

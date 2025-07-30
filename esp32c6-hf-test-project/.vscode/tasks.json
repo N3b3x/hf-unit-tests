@@ -1,0 +1,185 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "ESP32-C6: Build",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["build"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Build the ESP32-C6 HardFOC test project"
+        },
+        {
+            "label": "ESP32-C6: Clean Build",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["fullclean", "build"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Clean and build the ESP32-C6 project"
+        },
+        {
+            "label": "ESP32-C6: Set Target",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["set-target", "esp32c6"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Set the target to ESP32-C6"
+        },
+        {
+            "label": "ESP32-C6: Flash",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["flash"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "dependsOn": "ESP32-C6: Build",
+            "detail": "Flash the built firmware to ESP32-C6"
+        },
+        {
+            "label": "ESP32-C6: Monitor",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["monitor"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "isBackground": true,
+            "problemMatcher": [],
+            "detail": "Monitor serial output from ESP32-C6"
+        },
+        {
+            "label": "ESP32-C6: Build and Flash",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["build", "flash"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Build and flash the ESP32-C6 project"
+        },
+        {
+            "label": "ESP32-C6: Build, Flash, and Monitor",
+            "type": "shell",
+            "command": "./build_and_flash.sh",
+            "args": [],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "isBackground": true,
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "Build, flash, and monitor using the build script"
+        },
+        {
+            "label": "ESP32-C6: Configure (menuconfig)",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["menuconfig"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Open ESP-IDF configuration menu"
+        },
+        {
+            "label": "ESP32-C6: Size Analysis",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["size"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "dependsOn": "ESP32-C6: Build",
+            "detail": "Analyze binary size"
+        },
+        {
+            "label": "ESP32-C6: Erase Flash",
+            "type": "shell",
+            "command": "idf.py",
+            "args": ["erase-flash"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "detail": "Erase the entire flash memory"
+        }
+    ]
+}
