@@ -22,9 +22,18 @@
 #include "base/BasePeriodicTimer.h"
 #include "base/BaseTemperature.h"
 
+// ESP-IDF C headers must be wrapped in extern "C" for C++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 static const char* TAG = "HW_TEST";
 
@@ -64,16 +73,15 @@ bool test_all_hardware_peripherals(void) {
 bool test_gpio_functionality(void) {
     ESP_LOGI(TAG, "Testing GPIO functionality...");
     
-    try {
-        // Create GPIO configuration
-        hf_gpio_config_t gpio_config = {};
-        gpio_config.pin_assignments = {
-            HF_TEST_LED_BUILTIN_PIN,
-            HF_TEST_GPIO_OUTPUT_0,
-            HF_TEST_GPIO_OUTPUT_1,
-            HF_TEST_BUTTON_PIN,
-            HF_TEST_GPIO_INPUT_0,
-            HF_TEST_GPIO_INPUT_1
+    // Create GPIO configuration
+    hf_gpio_config_t gpio_config = {};
+    gpio_config.pin_assignments = {
+        HF_TEST_LED_BUILTIN_PIN,
+        HF_TEST_GPIO_OUTPUT_0,
+        HF_TEST_GPIO_OUTPUT_1,
+        HF_TEST_BUTTON_PIN,
+        HF_TEST_GPIO_INPUT_0,
+        HF_TEST_GPIO_INPUT_1
         };
         gpio_config.enable_interrupts = true;
         gpio_config.enable_rtc_domain = false;
@@ -89,179 +97,162 @@ bool test_gpio_functionality(void) {
         ESP_LOGI(TAG, "✅ GPIO initialization PASSED");
         
         // Test digital output
-        hf_gpio_err_t result = gpio.SetPinMode(HF_TEST_LED_BUILTIN_PIN, hf_gpio_mode_t::HF_GPIO_MODE_OUTPUT);
+        hf_gpio_err_t result = gpio.SetDirection(hf_gpio_direction_t::HF_GPIO_DIRECTION_OUTPUT);
         if (result != hf_gpio_err_t::GPIO_SUCCESS) {
-            ESP_LOGE(TAG, "Failed to set LED pin mode");
+            ESP_LOGE(TAG, "Failed to set LED pin direction");
             return false;
         }
         
         // Test LED blinking
         ESP_LOGI(TAG, "Testing LED blinking...");
         for (int i = 0; i < 5; i++) {
-            gpio.DigitalWrite(HF_TEST_LED_BUILTIN_PIN, hf_gpio_state_t::HF_GPIO_STATE_HIGH);
+            gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_ACTIVE);
             vTaskDelay(pdMS_TO_TICKS(200));
-            gpio.DigitalWrite(HF_TEST_LED_BUILTIN_PIN, hf_gpio_state_t::HF_GPIO_STATE_LOW);
+            gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_INACTIVE);
             vTaskDelay(pdMS_TO_TICKS(200));
         }
         
         ESP_LOGI(TAG, "✅ GPIO digital output test PASSED");
         
         // Test digital input
-        result = gpio.SetPinMode(HF_TEST_BUTTON_PIN, hf_gpio_mode_t::HF_GPIO_MODE_INPUT_PULLUP);
+        result = gpio.SetDirection(hf_gpio_direction_t::HF_GPIO_DIRECTION_INPUT);
+        gpio.SetPullMode(hf_gpio_pull_mode_t::HF_GPIO_PULL_UP);
         if (result != hf_gpio_err_t::GPIO_SUCCESS) {
-            ESP_LOGE(TAG, "Failed to set button pin mode");
+            ESP_LOGE(TAG, "Failed to set button pin direction");
             return false;
         }
         
-        hf_gpio_state_t button_state = gpio.DigitalRead(HF_TEST_BUTTON_PIN);
+        hf_gpio_state_t button_state = gpio.GetCurrentState();
         ESP_LOGI(TAG, "✅ GPIO digital input test PASSED - Button state: %s", 
-                 (button_state == hf_gpio_state_t::HF_GPIO_STATE_HIGH) ? "HIGH" : "LOW");
+                 (button_state == hf_gpio_state_t::HF_GPIO_STATE_ACTIVE) ? "ACTIVE" : "INACTIVE");
         
         // Test multiple output pins
-        gpio.SetPinMode(HF_TEST_GPIO_OUTPUT_0, hf_gpio_mode_t::HF_GPIO_MODE_OUTPUT);
-        gpio.SetPinMode(HF_TEST_GPIO_OUTPUT_1, hf_gpio_mode_t::HF_GPIO_MODE_OUTPUT);
+        gpio.SetDirection(hf_gpio_direction_t::HF_GPIO_DIRECTION_OUTPUT);
+        gpio.SetDirection(hf_gpio_direction_t::HF_GPIO_DIRECTION_OUTPUT);
         
         ESP_LOGI(TAG, "Testing multiple GPIO outputs...");
-        gpio.DigitalWrite(HF_TEST_GPIO_OUTPUT_0, hf_gpio_state_t::HF_GPIO_STATE_HIGH);
-        gpio.DigitalWrite(HF_TEST_GPIO_OUTPUT_1, hf_gpio_state_t::HF_GPIO_STATE_LOW);
+        gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_ACTIVE);
+        gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_INACTIVE);
         vTaskDelay(pdMS_TO_TICKS(500));
         
-        gpio.DigitalWrite(HF_TEST_GPIO_OUTPUT_0, hf_gpio_state_t::HF_GPIO_STATE_LOW);
-        gpio.DigitalWrite(HF_TEST_GPIO_OUTPUT_1, hf_gpio_state_t::HF_GPIO_STATE_HIGH);
+        gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_INACTIVE);
+        gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_ACTIVE);
         vTaskDelay(pdMS_TO_TICKS(500));
         
         // Reset outputs
-        gpio.DigitalWrite(HF_TEST_GPIO_OUTPUT_0, hf_gpio_state_t::HF_GPIO_STATE_LOW);
-        gpio.DigitalWrite(HF_TEST_GPIO_OUTPUT_1, hf_gpio_state_t::HF_GPIO_STATE_LOW);
+        gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_INACTIVE);
+        gpio.SetState(hf_gpio_state_t::HF_GPIO_STATE_INACTIVE);
         
         ESP_LOGI(TAG, "✅ GPIO functionality test PASSED");
         return true;
-        
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Exception in GPIO test: %s", e.what());
-        return false;
-    } catch (...) {
-        ESP_LOGE(TAG, "Unknown exception in GPIO test");
-        return false;
+}
     }
 }
 
 bool test_adc_functionality(void) {
     ESP_LOGI(TAG, "Testing ADC functionality...");
     
-    try {
-        // Create ADC configuration
-        hf_adc_unit_config_t adc_config = {};
-        adc_config.unit_id = hf_adc_unit_t::HF_ADC_UNIT_1;
-        adc_config.resolution = hf_adc_bitwidth_t::HF_ADC_BITWIDTH_12;
-        adc_config.reference_voltage_mv = 1100;  // ESP32-C6 internal reference
-        adc_config.enable_calibration = true;
-        adc_config.enable_continuous_mode = false;
-        
-        // Create ADC instance
-        EspAdc adc(adc_config);
-        if (!adc.EnsureInitialized()) {
-            ESP_LOGE(TAG, "Failed to initialize ADC");
-            return false;
-        }
-        
-        ESP_LOGI(TAG, "✅ ADC initialization PASSED");
-        
-        // Configure ADC channels
-        hf_adc_channel_config_t channel_configs[] = {
-            {hf_adc_channel_t::HF_ADC_CHANNEL_0, hf_adc_attenuation_t::HF_ADC_ATTEN_DB_11},
-            {hf_adc_channel_t::HF_ADC_CHANNEL_1, hf_adc_attenuation_t::HF_ADC_ATTEN_DB_11},
-            {hf_adc_channel_t::HF_ADC_CHANNEL_2, hf_adc_attenuation_t::HF_ADC_ATTEN_DB_11},
-        };
-        
-        for (const auto& config : channel_configs) {
-            hf_adc_err_t result = adc.ConfigureChannel(config);
-            if (result != hf_adc_err_t::ADC_SUCCESS) {
-                ESP_LOGE(TAG, "Failed to configure ADC channel %d", (int)config.channel);
-                return false;
-            }
-        }
-        
-        ESP_LOGI(TAG, "✅ ADC channel configuration PASSED");
-        
-        // Test ADC readings
-        ESP_LOGI(TAG, "Reading ADC channels...");
-        for (const auto& config : channel_configs) {
-            hf_adc_raw_t raw_value;
-            hf_adc_voltage_t voltage_mv;
-            
-            hf_adc_err_t result = adc.ReadRaw(config.channel, &raw_value);
-            if (result == hf_adc_err_t::ADC_SUCCESS) {
-                result = adc.ReadVoltage(config.channel, &voltage_mv);
-                if (result == hf_adc_err_t::ADC_SUCCESS) {
-                    ESP_LOGI(TAG, "   Channel %d: Raw=%d, Voltage=%d mV", 
-                             (int)config.channel, raw_value, voltage_mv);
-                } else {
-                    ESP_LOGE(TAG, "Failed to read voltage from channel %d", (int)config.channel);
-                    return false;
-                }
-            } else {
-                ESP_LOGE(TAG, "Failed to read raw value from channel %d", (int)config.channel);
-                return false;
-            }
-        }
-        
-        ESP_LOGI(TAG, "✅ ADC functionality test PASSED");
-        return true;
-        
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Exception in ADC test: %s", e.what());
-        return false;
-    } catch (...) {
-        ESP_LOGE(TAG, "Unknown exception in ADC test");
+    // Create ADC configuration
+    hf_adc_unit_config_t adc_config = {};
+    adc_config.unit_id = 1;  // ADC unit 1
+    adc_config.mode = hf_adc_mode_t::ONESHOT;
+    adc_config.bit_width = hf_adc_bitwidth_t::WIDTH_DEFAULT;
+    
+    // Create ADC instance with configuration
+    EspAdc adc(adc_config);
+    if (!adc.EnsureInitialized()) {
+        ESP_LOGE(TAG, "Failed to initialize ADC");
         return false;
     }
+    
+    ESP_LOGI(TAG, "✅ ADC initialization PASSED");
+    
+    // Configure ADC channels
+    hf_adc_channel_config_t adc_channel_configs[] = {
+        {0, hf_adc_atten_t::ATTEN_DB_12, hf_adc_bitwidth_t::WIDTH_DEFAULT, true},
+        {1, hf_adc_atten_t::ATTEN_DB_12, hf_adc_bitwidth_t::WIDTH_DEFAULT, true},
+        {2, hf_adc_atten_t::ATTEN_DB_12, hf_adc_bitwidth_t::WIDTH_DEFAULT, true},
+    };
+    
+    for (const auto& config : adc_channel_configs) {
+        hf_adc_err_t result = adc.ConfigureChannel(config.channel_id, config.attenuation, config.bitwidth);
+        if (result != hf_adc_err_t::ADC_SUCCESS) {
+            ESP_LOGE(TAG, "Failed to configure ADC channel %d", (int)config.channel_id);
+            return false;
+        }
+    }
+    
+    ESP_LOGI(TAG, "✅ ADC channel configuration PASSED");
+    
+    // Test ADC readings from all configured channels
+    ESP_LOGI(TAG, "Testing ADC channel readings...");
+    for (const auto& config : adc_channel_configs) {
+        hf_u32_t raw_value;
+        hf_u32_t voltage_mv;
+        
+        hf_adc_err_t result = adc.ReadSingleRaw(config.channel_id, raw_value);
+        if (result == hf_adc_err_t::ADC_SUCCESS) {
+            result = adc.RawToVoltage(raw_value, config.attenuation, voltage_mv);
+            if (result == hf_adc_err_t::ADC_SUCCESS) {
+                ESP_LOGI(TAG, "✅ Channel %d: Raw=%lu, Voltage=%lu mV", 
+                         (int)config.channel_id, (unsigned long)raw_value, (unsigned long)voltage_mv);
+            } else {
+                ESP_LOGE(TAG, "Failed to convert raw to voltage from channel %d", (int)config.channel_id);
+                return false;
+            }
+        } else {
+            ESP_LOGE(TAG, "Failed to read raw value from channel %d", (int)config.channel_id);
+            return false;
+        }
+    }
+    
+    ESP_LOGI(TAG, "✅ ADC functionality test PASSED");
+    return true;
 }
 
 bool test_pwm_functionality(void) {
     ESP_LOGI(TAG, "Testing PWM functionality...");
     
-    try {
-        // Create PWM configuration
-        hf_pwm_unit_config_t pwm_config = {};
-        pwm_config.unit_id = 0;
-        pwm_config.mode = hf_pwm_mode_t::HF_PWM_MODE_FADE;
-        pwm_config.base_clock_hz = HF_PWM_APB_CLOCK_HZ;
-        pwm_config.clock_source = hf_pwm_clock_source_t::HF_PWM_CLK_SRC_DEFAULT;
-        pwm_config.enable_fade = true;
-        pwm_config.enable_interrupts = false;
-        
-        // Create PWM instance
-        EspPwm pwm(pwm_config);
-        if (!pwm.EnsureInitialized()) {
-            ESP_LOGE(TAG, "Failed to initialize PWM");
-            return false;
-        }
-        
-        ESP_LOGI(TAG, "✅ PWM initialization PASSED");
-        
-        // Configure PWM channels
-        struct {
-            hf_pwm_channel_t channel;
-            hf_pin_num_t pin;
-            const char* name;
-        } pwm_channels[] = {
-            {hf_pwm_channel_t::HF_PWM_CHANNEL_0, HF_TEST_PWM_CHANNEL_0_PIN, "Channel 0"},
-            {hf_pwm_channel_t::HF_PWM_CHANNEL_1, HF_TEST_PWM_CHANNEL_1_PIN, "Channel 1"},
-            {hf_pwm_channel_t::HF_PWM_CHANNEL_2, HF_TEST_PWM_CHANNEL_2_PIN, "Channel 2"},
-        };
-        
-        for (const auto& ch : pwm_channels) {
-            hf_pwm_channel_config_t channel_config = {};
-            channel_config.channel = ch.channel;
-            channel_config.pin = ch.pin;
-            channel_config.timer_id = 0;
-            channel_config.frequency_hz = 1000;  // 1kHz
-            channel_config.resolution_bits = 10;  // 10-bit resolution (0-1023)
-            channel_config.duty_cycle = 0;       // Start at 0%
-            channel_config.phase_shift_degrees = 0;
+    // Create PWM configuration
+    hf_pwm_unit_config_t pwm_config = {};
+    pwm_config.unit_id = 0;
+    pwm_config.mode = hf_pwm_mode_t::HF_PWM_MODE_FADE;
+    pwm_config.base_clock_hz = HF_PWM_APB_CLOCK_HZ;
+    pwm_config.clock_source = hf_pwm_clock_source_t::HF_PWM_CLK_SRC_DEFAULT;
+    pwm_config.enable_fade = true;
+    pwm_config.enable_interrupts = false;
+    
+    // Create PWM instance
+    EspPwm pwm(pwm_config);
+    if (!pwm.EnsureInitialized()) {
+        ESP_LOGE(TAG, "Failed to initialize PWM");
+        return false;
+    }
+    
+    ESP_LOGI(TAG, "✅ PWM initialization PASSED");
+    
+    // Configure PWM channels
+    struct {
+        hf_channel_id_t channel_id;
+        hf_pin_num_t pin;
+        const char* name;
+    } pwm_channels[] = {
+        {0, HF_TEST_PWM_CHANNEL_0_PIN, "Channel 0"},
+        {1, HF_TEST_PWM_CHANNEL_1_PIN, "Channel 1"},
+        {2, HF_TEST_PWM_CHANNEL_2_PIN, "Channel 2"},
+    };
+    
+    for (const auto& ch : pwm_channels) {
+        hf_pwm_channel_config_t channel_config = {};
+        channel_config.gpio_pin = static_cast<hf_gpio_num_t>(ch.pin);
+        channel_config.channel_id = ch.channel_id;
+        channel_config.timer_id = 0;
+            channel_config.speed_mode = hf_pwm_mode_t::HF_PWM_MODE_BASIC;
+            channel_config.duty_initial = 0;       // Start at 0%
+            channel_config.intr_type = hf_pwm_intr_type_t::HF_PWM_INTR_DISABLE;
+            channel_config.hpoint = 0;
             
-            hf_pwm_err_t result = pwm.ConfigureChannel(channel_config);
+            hf_pwm_err_t result = pwm.ConfigureChannel(ch.channel_id, channel_config);
             if (result != hf_pwm_err_t::PWM_SUCCESS) {
                 ESP_LOGE(TAG, "Failed to configure PWM %s", ch.name);
                 return false;
@@ -270,107 +261,91 @@ bool test_pwm_functionality(void) {
         
         ESP_LOGI(TAG, "✅ PWM channel configuration PASSED");
         
+        // Start all PWM channels
+        hf_pwm_err_t result = pwm.StartAll();
+        if (result != hf_pwm_err_t::PWM_SUCCESS) {
+            ESP_LOGE(TAG, "Failed to start PWM channels");
+            return false;
+        }
+        
         // Test PWM output with varying duty cycles
         ESP_LOGI(TAG, "Testing PWM duty cycle sweep...");
         for (const auto& ch : pwm_channels) {
             ESP_LOGI(TAG, "   Testing %s (GPIO%d)", ch.name, ch.pin);
             
-            // Start PWM
-            hf_pwm_err_t result = pwm.Start(ch.channel);
-            if (result != hf_pwm_err_t::PWM_SUCCESS) {
-                ESP_LOGE(TAG, "Failed to start PWM %s", ch.name);
-                return false;
-            }
-            
             // Sweep duty cycle from 0% to 100% and back
-            for (uint32_t duty = 0; duty <= 1023; duty += 100) {
-                pwm.SetDutyCycle(ch.channel, duty);
+            for (float duty = 0.0f; duty <= 1.0f; duty += 0.1f) {
+                pwm.SetDutyCycle(ch.channel_id, duty);
                 vTaskDelay(pdMS_TO_TICKS(100));
             }
             
-            for (int32_t duty = 1023; duty >= 0; duty -= 100) {
-                pwm.SetDutyCycle(ch.channel, duty);
+            for (float duty = 1.0f; duty >= 0.0f; duty -= 0.1f) {
+                pwm.SetDutyCycle(ch.channel_id, duty);
                 vTaskDelay(pdMS_TO_TICKS(100));
             }
-            
-            // Stop PWM
-            pwm.Stop(ch.channel);
         }
+        
+        // Stop all PWM channels
+        pwm.StopAll();
         
         ESP_LOGI(TAG, "✅ PWM functionality test PASSED");
         return true;
-        
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Exception in PWM test: %s", e.what());
-        return false;
-    } catch (...) {
-        ESP_LOGE(TAG, "Unknown exception in PWM test");
-        return false;
-    }
+}
 }
 
 bool test_nvs_functionality(void) {
     ESP_LOGI(TAG, "Testing NVS functionality...");
     
-    try {
-        // Create NVS configuration
-        hf_nvs_config_t nvs_config = {};
-        nvs_config.partition_name = "nvs";
-        nvs_config.namespace_name = "test_storage";
-        nvs_config.enable_encryption = false;
-        nvs_config.enable_compression = false;
-        nvs_config.max_key_length = 15;
-        nvs_config.max_value_size = 4000;
+    // Create NVS instance with namespace
+    EspNvs nvs("test_storage");
+    if (!nvs.EnsureInitialized()) {
+        ESP_LOGE(TAG, "Failed to initialize NVS");
+        return false;
+    }
+    
+    ESP_LOGI(TAG, "✅ NVS initialization PASSED");
+    
+    // Test different data types
+    const char* test_key_str = "test_string";
+    const char* test_value_str = "ESP32-C6 Test Value";
+    const char* test_key_int = "test_u32";
+    hf_u32_t test_value_int = 12345;
+    const char* test_key_blob = "test_blob";
+    uint8_t test_value_blob[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+    
+    // Test string storage
+    hf_nvs_err_t result = nvs.SetString(test_key_str, test_value_str);
+    if (result != hf_nvs_err_t::NVS_SUCCESS) {
+        ESP_LOGE(TAG, "Failed to store string value");
+        return false;
+    }
         
-        // Create NVS instance
-        EspNvs nvs(nvs_config);
-        if (!nvs.EnsureInitialized()) {
-            ESP_LOGE(TAG, "Failed to initialize NVS");
-            return false;
-        }
-        
-        ESP_LOGI(TAG, "✅ NVS initialization PASSED");
-        
-        // Test different data types
-        const char* test_key_str = "test_string";
-        const char* test_value_str = "ESP32-C6 Test Value";
-        const char* test_key_int = "test_integer";
-        int32_t test_value_int = 12345;
-        const char* test_key_blob = "test_blob";
-        uint8_t test_value_blob[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
-        
-        // Test string storage
-        hf_nvs_err_t result = nvs.SetString(test_key_str, test_value_str);
-        if (result != hf_nvs_err_t::NVS_SUCCESS) {
-            ESP_LOGE(TAG, "Failed to store string value");
-            return false;
-        }
-        
-        std::string retrieved_str;
-        result = nvs.GetString(test_key_str, retrieved_str);
-        if (result != hf_nvs_err_t::NVS_SUCCESS || retrieved_str != test_value_str) {
+        char retrieved_str[100] = {0};
+        size_t str_len = sizeof(retrieved_str);
+        result = nvs.GetString(test_key_str, retrieved_str, str_len);
+        if (result != hf_nvs_err_t::NVS_SUCCESS || strcmp(retrieved_str, test_value_str) != 0) {
             ESP_LOGE(TAG, "Failed to retrieve string value correctly");
             return false;
         }
         
         ESP_LOGI(TAG, "✅ NVS string storage test PASSED: '%s' = '%s'", 
-                 test_key_str, retrieved_str.c_str());
+                 test_key_str, retrieved_str);
         
-        // Test integer storage
-        result = nvs.SetInteger(test_key_int, test_value_int);
+        // Test U32 storage
+        result = nvs.SetU32(test_key_int, test_value_int);
         if (result != hf_nvs_err_t::NVS_SUCCESS) {
-            ESP_LOGE(TAG, "Failed to store integer value");
+            ESP_LOGE(TAG, "Failed to store U32 value");
             return false;
         }
         
-        int32_t retrieved_int;
-        result = nvs.GetInteger(test_key_int, retrieved_int);
+        hf_u32_t retrieved_int;
+        result = nvs.GetU32(test_key_int, retrieved_int);
         if (result != hf_nvs_err_t::NVS_SUCCESS || retrieved_int != test_value_int) {
-            ESP_LOGE(TAG, "Failed to retrieve integer value correctly");
+            ESP_LOGE(TAG, "Failed to retrieve U32 value correctly");
             return false;
         }
         
-        ESP_LOGI(TAG, "✅ NVS integer storage test PASSED: '%s' = %d", 
+        ESP_LOGI(TAG, "✅ NVS U32 storage test PASSED: '%s' = %u", 
                  test_key_int, retrieved_int);
         
         // Test blob storage
@@ -382,7 +357,7 @@ bool test_nvs_functionality(void) {
         
         uint8_t retrieved_blob[sizeof(test_value_blob)];
         size_t blob_size = sizeof(retrieved_blob);
-        result = nvs.GetBlob(test_key_blob, retrieved_blob, blob_size);
+        result = nvs.GetBlob(test_key_blob, retrieved_blob, blob_size, &blob_size);
         if (result != hf_nvs_err_t::NVS_SUCCESS || 
             blob_size != sizeof(test_value_blob) ||
             memcmp(retrieved_blob, test_value_blob, blob_size) != 0) {
@@ -393,13 +368,6 @@ bool test_nvs_functionality(void) {
         ESP_LOGI(TAG, "✅ NVS blob storage test PASSED: '%s' = [%zu bytes]", 
                  test_key_blob, blob_size);
         
-        // Test key existence
-        bool exists = nvs.HasKey(test_key_str);
-        if (!exists) {
-            ESP_LOGE(TAG, "Key existence check failed");
-            return false;
-        }
-        
         // Test key deletion
         result = nvs.EraseKey(test_key_str);
         if (result != hf_nvs_err_t::NVS_SUCCESS) {
@@ -407,19 +375,19 @@ bool test_nvs_functionality(void) {
             return false;
         }
         
-        exists = nvs.HasKey(test_key_str);
-        if (exists) {
-            ESP_LOGE(TAG, "Key still exists after deletion");
+        // Verify key was deleted by trying to retrieve it
+        char verify_str[100] = {0};
+        size_t verify_len = sizeof(verify_str);
+        result = nvs.GetString(test_key_str, verify_str, verify_len);
+        if (result != hf_nvs_err_t::NVS_ERR_KEY_NOT_FOUND) {
+            ESP_LOGE(TAG, "Key was not properly deleted");
             return false;
         }
         
         ESP_LOGI(TAG, "✅ NVS functionality test PASSED");
         return true;
         
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Exception in NVS test: %s", e.what());
-        return false;
-    } catch (...) {
+    }
         ESP_LOGE(TAG, "Unknown exception in NVS test");
         return false;
     }
@@ -428,26 +396,19 @@ bool test_nvs_functionality(void) {
 bool test_timer_functionality(void) {
     ESP_LOGI(TAG, "Testing Timer functionality...");
     
-    try {
-        // Create timer configuration
-        hf_periodic_timer_config_t timer_config = {};
-        timer_config.timer_id = hf_timer_id_t::HF_TIMER_0;
-        timer_config.period_us = 1000000;  // 1 second
-        timer_config.auto_reload = true;
-        timer_config.enable_interrupts = true;
-        timer_config.callback = nullptr;  // No callback for this test
+        ESP_LOGI(TAG, "🔧 Testing Timer functionality");
         
         // Create timer instance
-        EspPeriodicTimer timer(timer_config);
-        if (!timer.EnsureInitialized()) {
+        EspPeriodicTimer timer;
+        if (!timer.IsInitialized()) {
             ESP_LOGE(TAG, "Failed to initialize Timer");
             return false;
         }
         
         ESP_LOGI(TAG, "✅ Timer initialization PASSED");
         
-        // Test timer start/stop functionality
-        hf_timer_err_t result = timer.Start();
+        // Test timer start/stop functionality with 1 second period
+        hf_timer_err_t result = timer.Start(1000000); // 1 second in microseconds
         if (result != hf_timer_err_t::TIMER_SUCCESS) {
             ESP_LOGE(TAG, "Failed to start timer");
             return false;
@@ -463,9 +424,15 @@ bool test_timer_functionality(void) {
             return false;
         }
         
-        // Get timer count
-        uint64_t count = timer.GetTimerCount();
-        ESP_LOGI(TAG, "Timer count: %llu", count);
+        // Get timer statistics
+        hf_u64_t callback_count, missed_callbacks;
+        hf_timer_err_t last_error;
+        hf_timer_err_t stat_result = timer.GetStats(callback_count, missed_callbacks, last_error);
+        if (stat_result == hf_timer_err_t::TIMER_SUCCESS) {
+            ESP_LOGI(TAG, "Timer stats - Callbacks: %llu, Missed: %llu", 
+                     static_cast<unsigned long long>(callback_count),
+                     static_cast<unsigned long long>(missed_callbacks));
+        }
         
         // Stop timer
         result = timer.Stop();
@@ -484,10 +451,7 @@ bool test_timer_functionality(void) {
         ESP_LOGI(TAG, "✅ Timer functionality test PASSED");
         return true;
         
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Exception in Timer test: %s", e.what());
-        return false;
-    } catch (...) {
+    }
         ESP_LOGE(TAG, "Unknown exception in Timer test");
         return false;
     }
@@ -496,18 +460,11 @@ bool test_timer_functionality(void) {
 bool test_temperature_sensor(void) {
     ESP_LOGI(TAG, "Testing Temperature Sensor functionality...");
     
-    try {
-        // Create temperature sensor configuration
-        hf_temperature_config_t temp_config = {};
-        temp_config.sensor_id = hf_temperature_sensor_id_t::HF_TEMP_SENSOR_INTERNAL;
-        temp_config.sample_rate_hz = 1;  // 1Hz sampling
-        temp_config.enable_interrupts = false;
-        temp_config.high_threshold_celsius = 85.0f;
-        temp_config.low_threshold_celsius = -40.0f;
+        ESP_LOGI(TAG, "🔧 Testing Temperature Sensor functionality");
         
-        // Create temperature sensor instance
-        EspTemperature temp_sensor(temp_config);
-        if (!temp_sensor.EnsureInitialized()) {
+        // Create temperature sensor instance  
+        EspTemperature temp_sensor;
+        if (!temp_sensor.IsInitialized()) {
             ESP_LOGE(TAG, "Failed to initialize Temperature Sensor");
             return false;
         }
@@ -516,9 +473,9 @@ bool test_temperature_sensor(void) {
         
         // Test temperature reading
         float temperature_celsius;
-        hf_temperature_err_t result = temp_sensor.ReadTemperature(&temperature_celsius);
+        hf_temp_err_t result = temp_sensor.ReadTemperatureCelsius(&temperature_celsius);
         
-        if (result == hf_temperature_err_t::TEMPERATURE_SUCCESS) {
+        if (result == hf_temp_err_t::TEMP_SUCCESS) {
             ESP_LOGI(TAG, "✅ Temperature reading PASSED: %.2f°C", temperature_celsius);
             
             // Sanity check - temperature should be within reasonable range
@@ -536,8 +493,8 @@ bool test_temperature_sensor(void) {
         // Test multiple readings for stability
         ESP_LOGI(TAG, "Taking multiple temperature readings...");
         for (int i = 0; i < 5; i++) {
-            result = temp_sensor.ReadTemperature(&temperature_celsius);
-            if (result == hf_temperature_err_t::TEMPERATURE_SUCCESS) {
+            result = temp_sensor.ReadTemperatureCelsius(&temperature_celsius);
+            if (result == hf_temp_err_t::TEMP_SUCCESS) {
                 ESP_LOGI(TAG, "   Reading %d: %.2f°C", i + 1, temperature_celsius);
             } else {
                 ESP_LOGE(TAG, "Failed to read temperature on attempt %d", i + 1);
@@ -549,10 +506,7 @@ bool test_temperature_sensor(void) {
         ESP_LOGI(TAG, "✅ Temperature Sensor functionality test PASSED");
         return true;
         
-    } catch (const std::exception& e) {
-        ESP_LOGE(TAG, "Exception in Temperature Sensor test: %s", e.what());
-        return false;
-    } catch (...) {
+    }
         ESP_LOGE(TAG, "Unknown exception in Temperature Sensor test");
         return false;
     }

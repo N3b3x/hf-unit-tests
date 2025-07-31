@@ -7,8 +7,18 @@
  */
 
 #include "include/hf_gpio_config.hpp"
+
+// ESP-IDF C headers must be wrapped in extern "C" for C++ compatibility
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "driver/gpio.h"
 #include "esp_log.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 static const char* TAG = "GPIO_CONFIG";
 
